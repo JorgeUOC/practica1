@@ -179,20 +179,39 @@ class Progress {
    ============================================================================= */
 
 class ShowList {
+  #entries;
   constructor() {
-    // ...
+    this.#entries = [];
   }
-
-  // get entries()  → copia del array de pares { show, progress }
+// copia del array de pares { show, progress }
+  get entries(){
+    return this.#entries.map(entry => ({...entry}));
+  }  
 
   // get shows()    → array nuevo solo con los objetos Show
+  get shows(){
+    return this.#entries.map(entry => (entry.show));
+  }
 
   /**
    * Añade una serie creando su Progress inicial.
    * Devuelve true si se ha añadido.
    */
   addShow(show) {
-    // ...
+  // Validación: Debe ser una instancia de la clase Show
+    if (!(show instanceof Show)) {
+      console.warn("Aviso: Entrada no válida.");
+      return false;
+    }
+    // Validación: No se permiten duplicados por id
+    const exists = this.#entries.some(entry => entry.show.id === show.id);
+    if (exists) {
+      console.warn(`La serie con ID ${show.id} existe, no se añade`);
+      return false;
+    }
+    const progress = new Progress(show.id);
+    this.#entries.push({ show, progress });
+    return true;
   }
 
   /**
@@ -200,7 +219,16 @@ class ShowList {
    * Devuelve true si se ha eliminado.
    */
   removeShow(showId) {
-    // ...
+    // entry = true si el id existe
+    const entryPos = this.#entries.findIndex(entry => entry.show.id === showId);
+
+    if (entryPos===-1) {
+      console.warn(`Aviso: No existe ninguna serie con el ID ${showId}, no se elimina ningun show`);
+      return false;
+    }
+    //elimina el show en la posicion de entryPos
+    this.#entries.splice(entryPos, 1);
+    return true;
   }
 
   /**
@@ -208,14 +236,29 @@ class ShowList {
    * Devuelve true si se ha reiniciado.
    */
   resetProgress(showId) {
-    // ...
+    // entry = true si el id existe
+    const entry = this.#entries.find(entry => entry.show.id === showId);
+
+    if (!entry) {
+      console.warn(`No existe ninguna serie con el ID ${showId}, no se resetea el progreso`);
+      return false;
+    }
+    entry.progress.reset();
+    return true;
   }
 
   /**
    * Muestra por consola nombre, tipo, valoración y progreso de cada serie.
    */
   showList() {
-    // ...
+    if(this.#entries.length === 0){
+      console.log("Lista Vacia");
+    }else{
+      this.#entries.forEach(({show, progress}) => {
+        const showProgress = progress.hasStarted ? `T${progress.currentSeason}/E${progress.currentEpisode}` : `Sin empezar`;
+        console.log(`${show.name}, ${show.type}, ${show.rating}, ${showProgress}`);
+        });
+    }
   }
 
   /* ===========================================================================
@@ -227,7 +270,13 @@ class ShowList {
    * Devuelve el número de series añadidas realmente.
    */
   addMultipleShows = (...shows) => {
-    // ...
+    let counter = 0;
+    shows.forEach(show => {
+      if(this.addShow(show)){
+        counter++;
+      }
+    });
+    return counter;
   };
 
   /**
@@ -363,7 +412,7 @@ const breakingBad = new Show({
     { season: 2, number: 2, name: 'Grilled', airdate: '2009-03-15', summary: '', runtime: 60 },
   ],
 });
-console.log (breakingBad);
+//console.log (breakingBad);
 
 const gameOfThrones = new Show({
   id: 82,
