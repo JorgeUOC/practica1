@@ -39,7 +39,7 @@ class Show {
   // Recordad: el valor de rating debe guardarse en un campo con otro nombre
   // (por ejemplo, un campo privado #rating).
 
-  constructor({
+  constructor(
     id,
     name,
     summary,
@@ -52,8 +52,11 @@ class Show {
     webChannel,
     imageUrl,
     weight,
-    episodes,
-  }) {
+    episodes
+  ) {
+    this.id = id;
+    this.name = name;
+
     // ...
   }
 
