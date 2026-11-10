@@ -38,8 +38,9 @@
 class Show {
   // Recordad: el valor de rating debe guardarse en un campo con otro nombre
   // (por ejemplo, un campo privado #rating).
+  #rating;
 
-  constructor(
+  constructor({
     id,
     name,
     summary,
@@ -48,23 +49,60 @@ class Show {
     rating,
     type,
     genres,
-    network,
-    webChannel,
+    network = null,
+    webChannel = null,
     imageUrl,
     weight,
     episodes
-  ) {
-    this.id = id;
+  }) 
+  {
+    // Validación de id (Debe ser un número entero positivo)
+    if (typeof id !== 'number' || id <= 0) {
+      console.warn("El 'id' introducido no es un valor aceptado, tiene que ser un número entero positivo.");
+      this.id = null; 
+    }else{
+      this.id = id;
+    }
     this.name = name;
-
+    this.summary = summary;
+    this.premiered = premiered;
+    this.status = status;
+    this.rating = rating;
+    this.type = type;
+    this.genres = genres;
+    this.network = network;
+    this.webChannel = webChannel;
+    this.imageUrl = imageUrl;
+    this.weight = weight;
+    this.episodes = episodes;
     // ...
   }
 
   // ── Getters y setters ────────────────────────────────────────────────────
 
-  // get rating() / set rating(newRating)
+  get rating(){
+    return this.#rating;
+  } 
+  
+  set rating(newRating){
+    const isNumber = (typeof newRating === 'number' 
+                      && !Number.isNaN(newRating) 
+                      && newRating >= 0 && newRating <= 10);
+    if (newRating!==null && isNumber) {
+      this.#rating = newRating;
+    } 
+      console.warn(`valor de rating incorrecto: ${newRating} Se mantiene el valor anterior (${this.#rating}).`);
+  }
 
-  // get platform()
+
+  get platform(){
+    if(this.network.name){
+      return this.network.name;
+    }else if(this.webChannel.name){
+      return this.webChannel.name;
+    }
+    return null;
+  }
 }
 
 
