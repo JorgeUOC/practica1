@@ -53,8 +53,8 @@ class Show {
     webChannel = null,
     imageUrl,
     weight,
-    episodes
-  }) 
+    episodes,
+}) 
   {
     // Validación de id (Debe ser un número entero positivo)
     if (typeof id !== 'number' || id <= 0) {
@@ -363,6 +363,7 @@ const breakingBad = new Show({
     { season: 2, number: 2, name: 'Grilled', airdate: '2009-03-15', summary: '', runtime: 60 },
   ],
 });
+console.log (breakingBad);
 
 const gameOfThrones = new Show({
   id: 82,
