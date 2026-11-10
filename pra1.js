@@ -63,18 +63,44 @@ class Show {
     }else{
       this.id = id;
     }
-    this.name = name;
+
+    if (typeof name !== 'string') {
+      console.warn("El 'name' introducido no es un valor aceptado, tiene que ser una cadena de texto");
+      this.name = null; 
+    }else{
+      this.name = name;
+    }
+
     this.summary = summary;
     this.premiered = premiered;
     this.status = status;
-    this.rating = rating;
+
+    if (rating === null || (typeof rating === 'number' && rating >= 0 && rating <= 10)) {
+      this.#rating = rating;
+    }else{
+      this.#rating = null;
+    }
+    
     this.type = type;
-    this.genres = genres;
+
+    if (!Array.isArray(genres)) {
+      console.warn("Aviso: 'genres' debe ser un array. Se inicializa como array vacío.");
+      this.genres = [];
+    }else{
+      this.genres = genres;
+    }
+
     this.network = network;
     this.webChannel = webChannel;
     this.imageUrl = imageUrl;
     this.weight = weight;
+
+  if (!Array.isArray(episodes)) {
+    console.warn("Aviso: 'episodes' debe ser un array. Se inicializa como array vacío.");
+    this.genres = [];
+  }else{
     this.episodes = episodes;
+  }
     // ...
   }
 
@@ -113,7 +139,9 @@ class Show {
 
 class Progress {
   constructor(showId) {
-    // ...
+    this.showId = showId;
+    this.currentSeason = 0;
+    this.currentEpisode = 0;
   }
 
   /**
@@ -121,17 +149,27 @@ class Progress {
    * Devuelve true si se ha actualizado el progreso.
    */
   advance(season, number) {
-    // ...
+    if (!Number.isInteger(season) || season <= 0 || !Number.isInteger(number) || number <= 0) {
+      console.warn(`Aviso: La temporada y episodio tienen que ser números enteros positivos. 
+                  Se mantiene el valor actual ${this.currentSeason}/${this.currentEpisode}`);
+      return false;
+    }
+    this.currentSeason = season;
+    this.currentEpisode = number;
+    return true;
   }
 
   /**
    * Vuelve el progreso a 0 / 0 (sin empezar).
    */
   reset() {
-    // ...
+    this.currentSeason = 0;
+    this.currentEpisode = 0;
   }
 
-  // get hasStarted()
+  get hasStarted(){
+    return this.currentSeason>0 && this.currentEpisode>0;
+  }
 }
 
 
