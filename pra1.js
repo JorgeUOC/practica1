@@ -97,11 +97,11 @@ class Show {
 
   if (!Array.isArray(episodes)) {
     console.warn("Aviso: 'episodes' debe ser un array. Se inicializa como array vacío.");
-    this.genres = [];
+    this.episodes = [];
   }else{
     this.episodes = episodes;
   }
-    // ...
+
   }
 
   // ── Getters y setters ────────────────────────────────────────────────────
@@ -114,12 +114,12 @@ class Show {
     const isNumber = (typeof newRating === 'number' 
                       && !Number.isNaN(newRating) 
                       && newRating >= 0 && newRating <= 10);
-    if (newRating!==null && isNumber) {
+    if(newRating!==null && isNumber){
       this.#rating = newRating;
-    } 
-      console.warn(`valor de rating incorrecto: ${newRating} Se mantiene el valor anterior (${this.#rating}).`);
+    }else{
+      console.warn(`valor de rating incorrecto: ${newRating} Se mantiene el valor anterior (${this.#rating}).`);  
+    }
   }
-
 
   get platform(){
     if(this.network.name){
@@ -284,7 +284,12 @@ class ShowList {
    * [minRating, maxRating].
    */
   getShowsByRatingRange = (minRating, maxRating) => {
-    // ...
+    if(typeof minRating!=='number' || typeof maxRating!=='number' 
+      || maxRating<minRating || minRating>=0 || maxRating<=10 || minRating<=10 || maxRating>=0){
+        console.log('Valores de rating incorrectos, losvalores deben estar entre 0-10 y min no puede ser superior a max');
+        return [];
+    }
+    return this.#entries.filter(({show}) => show.rating!==null && show.rating>=minRating && show.rating<=maxRating);
   };
 
   /**
@@ -292,22 +297,55 @@ class ShowList {
    * menor) sin modificar la lista original.
    */
   sortShowsByPopularity = () => {
-    // ...
+    return this.#entries.sort((a, b) => (b.show.weight - a.show.weight));
   };
 
   /* ===========================================================================
      ETAPA 5.2 — markEpisodeWatched (forma parte de la etapa 5)
      =========================================================================== */
+ 
+     // funcion auxiliar de showList para buscar el siguiente episodio de una serie necesaria para MarkEpisodeWatched
+  #getNextEpisode(show, progress){
+    // 1. Si el progreso está en 0 / 0, el siguiente es el 1/1.
+    if (!progress.hasStarted){
+      return show.findEpisodeByNumber(show.episodes, 1, 1);
+    }
+
+    // Busqueda de episodio siguiente segun progress
+    const nextEpisode = findEpisodeByNumber(show.episodes, progress.currentSeason, progress.currentEpisode+1);
+    if (nextEpisode){
+      return nextEpisode;
+    }
+
+    // Si no hay mas episodios en esa temporada primer episodio de la siguiente
+    const nextSeasonEpisode = findEpisodeByNumber(show.episodes, progress.currentSeason + 1, 1);
+    if(nextSeasonEpisode){
+      return nextSeasonEpisode;
+    }
+    return null;
+  }
 
   /**
    * Avanza el progreso de una serie hasta su siguiente episodio.
    * Devuelve el episodio marcado como visto, o null.
    */
   markEpisodeWatched(showId) {
-    // ...
+    //Se comprueba si existe ese ID
+    const entry = this.entries.find(show => (show.id === showId)); 
+    if(!entry){
+      console.log(`No existe el episodio con ID ${showId}`);
+      return null;
+    }
+    const nextEpisode = this.#getNextEpisode(entry.show, entry.progress);
+    if(!nextEpisode){
+      console.log('lo siento no hay más episodios disponibles');
+      return null;
+    }
+   
+    entry.Progress.advance(nextEpisode.season, nextEpisode.number);
+    return nextEpisode;
   }
 }
-
 
 /* =============================================================================
    ETAPA 5 — Función recursiva (4 puntos)
@@ -317,8 +355,21 @@ class ShowList {
  * 5.1 — Busca recursivamente un episodio por temporada y número.
  * Devuelve el episodio o null si no existe.
  */
-const findEpisodeByNumber = (episodes, season, number) => {
-  // ...
+const findEpisodeByNumber = (episodes, season, number, index=0) => {
+    // Validación
+    if (!Array.isArray(episodes) || !Number.isInteger(season) || season<=0 ||
+        !Number.isInteger(number) || number<=0) {
+        return null;
+    }
+    if(index>episodes.length){
+      console.log('episodio no encontrado');
+      return null;
+    }
+    const current = episodes[index];
+    if(current.season===season && current.number===number){
+      return current;
+    }
+    return findEpisodeByNumber(episodes, season, number, index+1);
 };
 
 
@@ -330,7 +381,22 @@ const findEpisodeByNumber = (episodes, season, number) => {
  * Devuelve { genre, count } con el género más frecuente del array de series.
  */
 const getMostCommonGenre = (shows) => {
-  // ...
+    if (!Array.isArray(shows) || shows.length === 0) return null;
+
+  const counts = shows.reduce((acc, show) => {
+    for (const genre of show.genres) {
+      if(acc[genre]){
+        acc[genre]++;
+      }else{
+        acc[genre] = 1;
+      }
+    }
+    return acc;
+  }, {});
+
+  return Object.keys(counts).reduce((best, genre) => {
+    return counts[genre] > best.count ? { genre, count: counts[genre] } : best;
+  }, { genre: "", count: 0 });
 };
 
 
@@ -355,14 +421,51 @@ const getShowInfo = (show) => {
  * Días naturales que faltan desde today hasta isoDate (aaaa-mm-dd).
  */
 const daysUntil = (isoDate, today = new Date()) => {
-  // ...
+  //Validar formato
+  if (typeof isoDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
+    console.warn(`formato de fecha no válido deberia ser aaaa-mm-dd`);
+    return null;
+  }
+
+  let isoParts =[];
+  isoParts = isoDate.split('-');
+  const isoYear = Number(parts[0]);
+  const isoMonth = Number(parts[1]);
+  const isoDay = Number(parts[2]);
+  //los meses en new Date van de 0-11 pero la isoDate recibida va de 1-12, restamos 1 a isDate para igualarlo al formato JavaScript
+  const targetDate = new Date(Date.UTC(isoYear, isoMonth - 1, isoDay));
+
+  //Comprobamos que la isoDate/today sea una fecha valida
+  if(targetDate instanceof Date && !Number.isNaN(targetDate.getTime())){
+    console.log(`${isoDate} no es una fecha valida`);
+    return null;
+  }
+  if(today instanceof Date && !Number.isNaN(today.getTime())){
+    console.log(`${today} no es una fecha valida`);
+    return null;
+  }
+
+  const currDate = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
+  //Javascript devuelve las restas de fechas en milisegundos con esta constante sabemos los milisegundos en un dia
+  const msDay = 1000 * 60 * 60 * 24;
+  //devuelve el numero de dias restantes tras restarlas (ms)
+  return Math.round((targetDate - currDate) / msDay);
 };
 
 /**
  * Devuelve el siguiente episodio pendiente de una serie, o null.
  */
 const getNextPendingEpisode = (show, progress) => {
-  // ...
+  if(!(show instanceof Show) || !(progress instanceof Progress)){
+    console.log('Los parametros introducidos no son instancia de Show y/o de Progress.');
+    return null;
+  }
+  if(show.id !== progress.showId){
+    console.log(`Aviso: El progreso (showId: ${progress.showId}) no pertenece a la serie "${show.name}" (id: ${show.id}).`);
+    return null;
+  }
+
+  return ShowList.prototype.getNextEpisode(show, progress);
 };
 
 /* =============================================================================
@@ -530,4 +633,11 @@ const TODAY = new Date(2026, 10, 13);
    los casos límite que indica el enunciado.
    ============================================================================= */
 
-// ...
+const catalogo = new ShowList();
+catalogo.addMultipleShows(breakingBad, theLastOfUs, severance, strangerThings, gameOfThrones, proyectoAurora);
+//console.log(catalogo.sortShowsByPopularity());
+//console.log(catalogo.showList());
+//console.log(catalogo.getShowsByRatingRange(8,10));
+//console.log(catalogo.sortShowsByPopularity());
+const commonGens = getMostCommonGenre(catalogo.shows);
+console.log(commonGens);
