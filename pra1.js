@@ -922,3 +922,4 @@ console.log(catalogo.showList());
 //console.log(catalogo.sortShowsByPopularity());
 //const commonGens = getMostCommonGenre(catalogo.shows);
 //console.log(commonGens);
+
