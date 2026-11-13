@@ -468,11 +468,11 @@ const daysUntil = (isoDate, today = new Date()) => {
   const targetDate = new Date(Date.UTC(isoYear, isoMonth - 1, isoDay));
 
   //Comprobamos que la isoDate/today sea una fecha valida
-  if(targetDate instanceof Date && !Number.isNaN(targetDate.getTime())){
-    console.log(`${isoDate} no es una fecha valida`);
+  if(targetDate instanceof Date && Number.isNaN(targetDate.getTime())){
+    console.log(`${targetDate} no es una fecha valida`);
     return null;
   }
-  if(today instanceof Date && !Number.isNaN(today.getTime())){
+  if(!(today instanceof Date) || Number.isNaN(today.getTime())){
     console.log(`${today} no es una fecha valida`);
     return null;
   }
@@ -531,13 +531,11 @@ const getShowsByPlatform = (shows, platformName) => {
     return null;
   }
   const matchingShows = shows.filter((show) => {
-    return show.network === platformName || show.webChannel === platformName;
+    return show.network?.name === platformName || show.webChannel?.name === platformName;
   });
 
   const rated = matchingShows.filter((show) => show.rating!==null);
-  let average = null;
-  const sumRate = rated.reduce((acc, show) => acc + show.rating, 0);
-  average = sumRate / rated.length;
+  const average = rated.length > 0 ? rated.reduce((acc, show) => acc + show.rating, 0) / rated.length : null;
 
   return {
     platform: platformName,
@@ -909,9 +907,6 @@ console.log("Parámetros inválidos (esperado null):", getNextPendingEpisode("Se
    PRUEBAS ETAPA 9 — getShowsByPlatform
    ============================================================================= */
 console.log("\n--- ETAPA 9: getShowsByPlatform ---");
-console.log("9.1 Series en AMC:", getShowsByPlatform(catalogo, "AMC"));
-console.log("9.2 Series en HBO (rating null):", getShowsByPlatform(catalogo, "HBO"));
-console.log("9.3 Plataforma sin series (Disney+):", getShowsByPlatform(catalogo, "Disney+"));
 
 console.log("Series en HBO:", getShowsByPlatform(catalogo.shows, 'HBO'));
 // { platform: 'HBO', count: 2, shows: ['The Last of Us', 'Game of Thrones'], averageRating: 8.4 }
