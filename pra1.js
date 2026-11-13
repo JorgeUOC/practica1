@@ -122,10 +122,10 @@ class Show {
   }
 
   get platform(){
-    if(this.network.name){
-      return this.network.name;
-    }else if(this.webChannel.name){
-      return this.webChannel.name;
+    if(this.network){
+      return this.network;
+    }else if(this.webChannel){
+      return this.webChannel;
     }
     return null;
   }
@@ -361,7 +361,7 @@ const findEpisodeByNumber = (episodes, season, number, index=0) => {
         !Number.isInteger(number) || number<=0) {
         return null;
     }
-    if(index>episodes.length){
+    if(index>=episodes.length){
       console.log('episodio no encontrado');
       return null;
     }
@@ -409,7 +409,37 @@ const getMostCommonGenre = (shows) => {
  * con el campo following: true.
  */
 const getShowInfo = (show) => {
-  // ...
+  if(!(show instanceof Show)){
+    console.log(`${show} no es una instancia valida`);
+    return null;
+  }
+  const {
+    name, 
+    type, 
+    rating, 
+    genres: [first = 'Sin genero'] = [], 
+    network, 
+    webChannel
+  } = show;
+
+  const rate = rating!==null ? rating : "sin valoracion";
+  const {name: net} = network || {};
+  const {name: web} = webChannel || {};
+
+  let platform;
+  if(net){
+    platform = net;
+  }else if(web){
+    platform = web;
+  }else{
+    platform = "unknown";
+  }
+  console.log(`Titulo: ${name}\nTipo: ${type}\nValoracion: ${rate}\nGenero: ${first}\nPlataforma: ${platform}`);
+  return{
+    ...show,
+    rating: show.rating,
+    following: true
+  };
 };
 
 
@@ -429,9 +459,9 @@ const daysUntil = (isoDate, today = new Date()) => {
 
   let isoParts =[];
   isoParts = isoDate.split('-');
-  const isoYear = Number(parts[0]);
-  const isoMonth = Number(parts[1]);
-  const isoDay = Number(parts[2]);
+  const isoYear = Number(isoParts[0]);
+  const isoMonth = Number(isoParts[1]);
+  const isoDay = Number(isoParts[2]);
   //los meses en new Date van de 0-11 pero la isoDate recibida va de 1-12, restamos 1 a isDate para igualarlo al formato JavaScript
   const targetDate = new Date(Date.UTC(isoYear, isoMonth - 1, isoDay));
 
@@ -464,8 +494,20 @@ const getNextPendingEpisode = (show, progress) => {
     console.log(`Aviso: El progreso (showId: ${progress.showId}) no pertenece a la serie "${show.name}" (id: ${show.id}).`);
     return null;
   }
+  
+  if (!progress.hasStarted) {
+        return findEpisodeByNumber(show.episodes, 1, 1);
+    }
 
-  return ShowList.prototype.getNextEpisode(show, progress);
+  const nextEpisode = findEpisodeByNumber(show.episodes, progress.currentSeason, progress.currentEpisode + 1);
+  if (nextEpisode){ 
+    return nextEpisode;
+  }
+  const nextSeasonEpisode = findEpisodeByNumber(show.episodes, progress.currentSeason + 1, 1);
+  if (nextSeasonEpisode){ 
+    return nextSeasonEpisode;
+  }
+  return null;
 };
 
 /* =============================================================================
@@ -477,7 +519,30 @@ const getNextPendingEpisode = (show, progress) => {
  * o plataforma concreta.
  */
 const getShowsByPlatform = (shows, platformName) => {
-  // ...
+  //validacion de parametros de entrada
+  if(!Array.isArray(shows)){
+    console.warn("Aviso: El parámetro 'shows' debe ser un array.");
+    return null;
+  }
+  if(typeof platformName !== "string" || platformName === ""){
+    console.warn("Aviso: El nombre de la plataforma debe ser una cadena de texto no vacía.");
+    return null;
+  }
+  const matchingShows = shows.filter((show) => {
+    return show.network === platformName || show.webChannel === platformName;
+  });
+
+  const rated = matchingShows.filter((show) => show.rating!==null);
+  let average = null;
+  const sumRate = rated.reduce((acc, show) => acc + show.rating, 0);
+  average = sumRate / rated.length;
+
+  return {
+    platform: platformName,
+    count: matchingShows.length,
+    shows: matchingShows.map((show) => show.name),
+    averageRating: average,
+  };
 };
 
 
@@ -625,6 +690,9 @@ const proyectoAurora = new Show({
 // día en que se ejecuten: 13 de noviembre de 2026 en hora local.
 const TODAY = new Date(2026, 10, 13);
 
+const catalogo = new ShowList();
+catalogo.addMultipleShows(breakingBad, theLastOfUs, severance, strangerThings, gameOfThrones, proyectoAurora);
+
 
 /* =============================================================================
    PRUEBAS
@@ -633,8 +701,217 @@ const TODAY = new Date(2026, 10, 13);
    los casos límite que indica el enunciado.
    ============================================================================= */
 
-const catalogo = new ShowList();
-catalogo.addMultipleShows(breakingBad, theLastOfUs, severance, strangerThings, gameOfThrones, proyectoAurora);
+
+
+// ------------------------------------------
+// ETAPA 1: Pruebas de la clase Show
+// ------------------------------------------
+console.log("--- ETAPA 1: Clase Show ---");
+
+console.log("1.1 Propiedades y plataforma (network vs webChannel):");
+console.log(`- ${breakingBad.name} (ID: ${breakingBad.id}) | Plataforma: ${breakingBad.platform} | Rating: ${breakingBad.rating}`);
+console.log(`- ${strangerThings.name} (ID: ${strangerThings.id}) | Plataforma: ${strangerThings.platform} | Rating: ${strangerThings.rating}`);
+console.log(`- ${severance.name} (ID: ${severance.id}) | Plataforma: ${severance.platform} | Rating: ${severance.rating}`);
+console.log(`- ${proyectoAurora.name} (Caso límite) | Plataforma: ${proyectoAurora.platform} | Rating: ${proyectoAurora.rating} | Géneros: [${proyectoAurora.genres}]`);
+
+console.log("\n1.2 Probando validación en constructor (deben saltar warnings):");
+const showInvalido = new Show({
+  id: -10,
+  name: 999,
+  summary: "Test",
+  premiered: "2020-01-01",
+  status: "Running",
+  rating: 15,
+  type: "Scripted",
+  genres: "No es un array",
+  episodes: null
+});
+console.log("Resultado show inválido:", {
+  id: showInvalido.id,
+  name: showInvalido.name,
+  rating: showInvalido.rating,
+  genres: showInvalido.genres,
+  episodes: showInvalido.episodes
+});
+
+console.log("\n1.3 Probando setter de rating en Breaking Bad y Proyecto Aurora:");
+proyectoAurora.rating = 8.1; // Estaba en null, ahora válido
+console.log("Nuevo rating Proyecto Aurora (esperado 8.1):", proyectoAurora.rating);
+proyectoAurora.rating = 12;  // Inválido -> warning y mantiene 8.1
+proyectoAurora.rating = "alto"; // Inválido -> warning y mantiene 8.1
+console.log("Rating tras fallos (esperado 8.1):", proyectoAurora.rating);
+// Lo devolvemos a null para mantener el caso límite original en las siguientes pruebas
+proyectoAurora.rating = null;
+
+
+// ------------------------------------------
+// ETAPA 2: Pruebas de la clase Progress
+// ------------------------------------------
+console.log("\n--- ETAPA 2: Clase Progress ---");
+const progresoGot = new Progress(gameOfThrones.id);
+console.log("Estado inicial (ID 82):", progresoGot.currentSeason, progresoGot.currentEpisode, "| Empezado:", progresoGot.hasStarted);
+
+console.log("Avanzar a T1E2 (válido):", progresoGot.advance(1, 2)); // true
+console.log("Estado actual:", `T${progresoGot.currentSeason}E${progresoGot.currentEpisode}`, "| Empezado:", progresoGot.hasStarted);
+
+console.log("Avanzar a T0E1 (inválido):", progresoGot.advance(0, 1)); // false + warning
+console.log("Avanzar a T2E-3 (inválido):", progresoGot.advance(2, -3)); // false + warning
+console.log("Estado tras intentos fallidos (esperado T1E2):", `T${progresoGot.currentSeason}E${progresoGot.currentEpisode}`);
+
+progresoGot.reset();
+console.log("Tras reset (esperado T0E0 | false):", `T${progresoGot.currentSeason}E${progresoGot.currentEpisode}`, "| Empezado:", progresoGot.hasStarted);
+
+
+// ------------------------------------------
+// ETAPA 3: Pruebas de la clase ShowList
+// ------------------------------------------
+console.log("\n--- ETAPA 3: Clase ShowList ---");
+const miLista = new ShowList();
+
+console.log("3.1 Lista vacía:");
+miLista.showList();
+
+console.log("\n3.2 Añadir series individualmente y validaciones:");
+console.log("Añadir Breaking Bad:", miLista.addShow(breakingBad)); // true
+console.log("Añadir Breaking Bad otra vez (duplicado):", miLista.addShow(breakingBad)); // false + warning
+console.log("Añadir objeto que no es Show:", miLista.addShow({ id: 1, name: "Fake" })); // false + warning
+
+console.log("\n3.3 Eliminar serie:");
+console.log("Eliminar ID inexistente (99999):", miLista.removeShow(99999)); // false + warning
+console.log("Eliminar Breaking Bad (ID 169):", miLista.removeShow(169)); // true
+console.log("Shows restantes (esperado 0):", miLista.shows.length);
+
+// ------------------------------------------
+// ETAPA 4: Funciones flecha en ShowList
+// ------------------------------------------
+console.log("\n--- ETAPA 4: Funciones flecha en ShowList ---");
+
+const totalAñadidas = miLista.addMultipleShows(
+  breakingBad,
+  gameOfThrones,
+  strangerThings,
+  theLastOfUs,
+  severance,
+  proyectoAurora,
+  gameOfThrones // Duplicado, no debería contarse
+);
+console.log("4.1 Series añadidas con addMultipleShows (esperado 6):", totalAñadidas);
+
+console.log("\n4.2 Filtrar por rango de rating (8.0 a 9.5) - excluye null (Proyecto Aurora) y < 8.0:");
+const mejoresSeries = miLista.getShowsByRatingRange(8.0, 9.5);
+console.log("Resultados (esperado BB 9.2, GoT 8.9, ST 8.4):", mejoresSeries.map(e => `${e.show.name} (${e.show.rating})`));
+
+console.log("Probando rango inválido (9.0 a 7.0):");
+miLista.getShowsByRatingRange(9.0, 7.0); // Mensaje de error
+
+console.log("\n4.3 Ordenar por popularidad (weight descendente) sin mutar original:");
+const porPopularidad = miLista.sortShowsByPopularity();
+console.log("Ordenadas (99, 99, 98, 97, 96, 40):", porPopularidad.map(e => `${e.show.name} (${e.show.weight})`));
+console.log("Primera serie en lista original (sigue siendo Breaking Bad):", miLista.shows.name);
+
+
+// ------------------------------------------
+// ETAPA 5: Recursividad y markEpisodeWatched
+// ------------------------------------------
+console.log("\n--- ETAPA 5: Recursividad y markEpisodeWatched ---");
+
+console.log("5.1 Búsqueda recursiva (findEpisodeByNumber):");
+console.log("Buscar T2E1 en Breaking Bad:", findEpisodeByNumber(breakingBad.episodes, 2, 1)?.name); // Seven Thirty-Seven
+console.log("Buscar T3E1 en The Last of Us:", findEpisodeByNumber(theLastOfUs.episodes, 3, 1)?.name); // TBA
+console.log("Buscar T5E1 en Severance (no existe):", findEpisodeByNumber(severance.episodes, 5, 1)); // null
+
+console.log("\n5.2 Avanzar episodios automáticamente en Stranger Things (ID 2993):");
+console.log("1º visto (T1E1):", miLista.markEpisodeWatched(2993)?.name);
+console.log("2º visto (T1E2):", miLista.markEpisodeWatched(2993)?.name);
+console.log("3º visto - salto a T2E1:", miLista.markEpisodeWatched(2993)?.name);
+console.log("4º visto - sin más episodios (esperado null):", miLista.markEpisodeWatched(2993));
+
+console.log("\n5.3 Avanzar un episodio en Severance (ID 44933) y luego resetear:");
+console.log("1º visto en Severance:", miLista.markEpisodeWatched(44933)?.name);
+console.log("Reseteando progreso de Severance:", miLista.resetProgress(44933)); // true
+
+console.log("\n5.4 Estado completo de la lista con showList():");
+miLista.showList();
+
+// ------------------------------------------
+// ETAPA 6: Uso de reduce (getMostCommonGenre)
+// ------------------------------------------
+console.log("\n--- ETAPA 6: getMostCommonGenre ---");
+// Drama aparece en las 5 series reales; Proyecto Aurora tiene genres: []
+console.log("Género más común (esperado { genre: 'Drama', count: 5 }):", getMostCommonGenre(miLista.shows));
+console.log("Solo con Proyecto Aurora (sin géneros):", getMostCommonGenre([proyectoAurora]));
+
+// ------------------------------------------
+// ETAPA 7: Destructuring y spread (getShowInfo)
+// ------------------------------------------
+console.log("\n--- ETAPA 7: getShowInfo ---");
+
+console.log("7.1 Serie con network y rating (Breaking Bad):");
+const infoBB = getShowInfo(breakingBad);
+console.log("Objeto devuelto (debe tener following: true y rating 9.2):", infoBB);
+console.log("¿El objeto original se ha modificado? (esperado undefined):", breakingBad.following);
+
+console.log("\n7.2 Serie con webChannel (Stranger Things):");
+const infoST = getShowInfo(strangerThings);
+console.log("Objeto devuelto:", infoST);
+
+console.log("\n7.3 Serie caso límite (Proyecto Aurora: sin rating, sin géneros, sin plataforma):");
+const infoAurora = getShowInfo(proyectoAurora);
+console.log("Objeto devuelto:", infoAurora);
+
+console.log("\n7.4 Entrada inválida (no es instancia de Show):");
+//console.log("Con objeto plano:", getShowInfo({ name: "Serie Falsa" })); // esperado null
+//console.log("Con null:", getShowInfo(null)); // esperado null
+
+// ------------------------------------------
+// ETAPA 8: Manejo de fechas (daysUntil y getNextPendingEpisode)
+// ------------------------------------------
+console.log("\n--- ETAPA 8: Manejo de fechas ---");
+
+// 8.1 Pruebas de daysUntil usando TODAY = new Date(2026, 10, 13) -> 13 nov 2026
+console.log("8.1 Pruebas de daysUntil (referencia TODAY: 2026-11-13):");
+
+// Fecha futura: estreno de Proyecto Aurora (2026-11-20) -> faltan 7 días
+console.log("Estreno Proyecto Aurora (2026-11-20, esperado 7):", daysUntil(proyectoAurora.premiered, TODAY));
+
+// Mismo día: 2026-11-13 -> faltan 0 días
+console.log("Mismo día (2026-11-13, esperado 0):", daysUntil("2026-11-13", TODAY));
+
+// Fecha pasada: estreno de Breaking Bad (2008-01-20) -> número negativo
+console.log("Estreno Breaking Bad (2008-01-20, esperado < 0):", daysUntil(breakingBad.premiered, TODAY));
+
+// Casos inválidos en daysUntil
+console.log("Formato incorrecto ('13/11/2026', esperado null):", daysUntil("13/11/2026", TODAY));
+console.log("Tipo incorrecto (null, esperado null):", daysUntil(null, TODAY));
+console.log("Fecha today inválida (esperado null):", daysUntil("2026-11-20", "no-es-fecha"));
+
+// 8.2 Pruebas de getNextPendingEpisode
+console.log("\n8.2 Pruebas de getNextPendingEpisode:");
+
+const progSeverance = new Progress(severance.id); // ID 44933, empieza en 0x0
+console.log("Severance sin empezar (esperado T1E1 - Good News About Hell):", getNextPendingEpisode(severance, progSeverance));
+
+progSeverance.advance(1, 2); // Marcamos visto hasta T1E2
+console.log("Severance tras ver T1E2 (esperado T2E1 - Hello, Ms. Cobel):", getNextPendingEpisode(severance, progSeverance));
+
+progSeverance.advance(2, 1); // Marcamos visto el último episodio disponible (T2E1)
+console.log("Severance al día, sin más episodios (esperado null):", getNextPendingEpisode(severance, progSeverance));
+
+// Casos de error en getNextPendingEpisode
+console.log("\n> Probando errores en getNextPendingEpisode:");
+const progEquivocado = new Progress(breakingBad.id); // ID 169 != 44933
+console.log("Progreso de otra serie (esperado null):", getNextPendingEpisode(severance, progEquivocado));
+console.log("Parámetros inválidos (esperado null):", getNextPendingEpisode("Severance", progSeverance));
+
+console.log("\n==================================================");
+console.log("PRUEBAS ETAPA 9 — getShowsByPlatform");
+console.log("==================================================");
+
+console.log("9.1 Series en AMC:", getShowsByPlatform(catalogo, "AMC"));
+console.log("9.2 Series en HBO (rating null):", getShowsByPlatform(catalogo, "HBO"));
+console.log("9.3 Plataforma sin series (Disney+):", getShowsByPlatform(catalogo, "Disney+"));
+
+
 //console.log(catalogo.sortShowsByPopularity());
 //console.log(catalogo.showList());
 //console.log(catalogo.getShowsByRatingRange(8,10));
