@@ -287,7 +287,7 @@ class ShowList {
    */
   getShowsByRatingRange = (minRating, maxRating) => {
     if(typeof minRating!=='number' || typeof maxRating!=='number' 
-      || maxRating<minRating || minRating>=0 || maxRating<=10 || minRating<=10 || maxRating>=0){
+      || maxRating<minRating || minRating<0 || maxRating>10){
         console.log('Valores de rating incorrectos, losvalores deben estar entre 0-10 y min no puede ser superior a max');
         return [];
     }
@@ -310,7 +310,7 @@ class ShowList {
   #getNextEpisode(show, progress){
     // 1. Si el progreso está en 0 / 0, el siguiente es el 1/1.
     if (!progress.hasStarted){
-      return show.findEpisodeByNumber(show.episodes, 1, 1);
+      return findEpisodeByNumber(show.episodes, 1, 1);
     }
 
     // Busqueda de episodio siguiente segun progress
@@ -333,7 +333,7 @@ class ShowList {
    */
   markEpisodeWatched(showId) {
     //Se comprueba si existe ese ID
-    const entry = this.entries.find(show => (show.id === showId)); 
+    const entry = this.#entries.find(entry => (entry.show.id === showId)); 
     if(!entry){
       console.log(`No existe el episodio con ID ${showId}`);
       return null;
@@ -344,7 +344,7 @@ class ShowList {
       return null;
     }
    
-    entry.Progress.advance(nextEpisode.season, nextEpisode.number);
+    entry.progress.advance(nextEpisode.season, nextEpisode.number);
     return nextEpisode;
   }
 }
@@ -798,8 +798,10 @@ const totalAñadidas = miLista.addMultipleShows(
 console.log("4.1 Series añadidas con addMultipleShows (esperado 6):", totalAñadidas);
 
 console.log("\n4.2 Filtrar por rango de rating (8.0 a 9.5) - excluye null (Proyecto Aurora) y < 8.0:");
-const mejoresSeries = miLista.getShowsByRatingRange(8.0, 9.5);
+const mejoresSeries = miLista.getShowsByRatingRange(8.3, 9.5);
 console.log("Resultados (esperado BB 9.2, GoT 8.9, ST 8.4):", mejoresSeries.map(e => `${e.show.name} (${e.show.rating})`));
+//console.log(mejoresSeries);
+//console.log(catalogo.getShowsByRatingRange(8,10));
 
 console.log("Probando rango inválido (9.0 a 7.0):");
 miLista.getShowsByRatingRange(9.0, 7.0); // Mensaje de error
@@ -807,8 +809,6 @@ miLista.getShowsByRatingRange(9.0, 7.0); // Mensaje de error
 console.log("\n4.3 Ordenar por popularidad (weight descendente) sin mutar original:");
 const porPopularidad = miLista.sortShowsByPopularity();
 console.log("Ordenadas (99, 99, 98, 97, 96, 40):", porPopularidad.map(e => `${e.show.name} (${e.show.weight})`));
-console.log("Primera serie en lista original (sigue siendo Breaking Bad):", miLista.shows.name);
-
 
 // ------------------------------------------
 // ETAPA 5: Recursividad y markEpisodeWatched
@@ -916,9 +916,9 @@ console.log("Series en Netflix:", getShowsByPlatform(catalogo.shows, 'Netflix'))
 
 console.log("Plataforma sin series ('Disney+'):", getShowsByPlatform(catalogo.shows, 'Disney+'));
 
-//console.log(catalogo.sortShowsByPopularity());
-//console.log(catalogo.showList());
-//console.log(catalogo.getShowsByRatingRange(8,10));
+console.log(catalogo.sortShowsByPopularity());
+console.log(catalogo.showList());
+
 //console.log(catalogo.sortShowsByPopularity());
 //const commonGens = getMostCommonGenre(catalogo.shows);
 //console.log(commonGens);
