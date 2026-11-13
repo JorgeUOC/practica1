@@ -30,6 +30,8 @@
  * =============================================================================
  */
 
+// REPOSITORIO DE GITHUB: https://github.com/JorgeUOC/practica1.git
+
 /* =============================================================================
    ETAPA 1 — Clase Show (3 puntos)
    Representa una serie con sus datos de catálogo (los que vendrán de la API).
