@@ -903,18 +903,25 @@ const progEquivocado = new Progress(breakingBad.id); // ID 169 != 44933
 console.log("Progreso de otra serie (esperado null):", getNextPendingEpisode(severance, progEquivocado));
 console.log("Parámetros inválidos (esperado null):", getNextPendingEpisode("Severance", progSeverance));
 
-console.log("\n==================================================");
-console.log("PRUEBAS ETAPA 9 — getShowsByPlatform");
-console.log("==================================================");
-
+/* =============================================================================
+   PRUEBAS ETAPA 9 — getShowsByPlatform
+   ============================================================================= */
+console.log("\n--- ETAPA 9: getShowsByPlatform ---");
 console.log("9.1 Series en AMC:", getShowsByPlatform(catalogo, "AMC"));
 console.log("9.2 Series en HBO (rating null):", getShowsByPlatform(catalogo, "HBO"));
 console.log("9.3 Plataforma sin series (Disney+):", getShowsByPlatform(catalogo, "Disney+"));
 
+console.log("Series en HBO:", getShowsByPlatform(catalogo.shows, 'HBO'));
+// { platform: 'HBO', count: 2, shows: ['The Last of Us', 'Game of Thrones'], averageRating: 8.4 }
+
+console.log("Series en Netflix:", getShowsByPlatform(catalogo.shows, 'Netflix'));
+// { platform: 'Netflix', count: 1, shows: ['Stranger Things'], averageRating: 8.4 }
+
+console.log("Plataforma sin series ('Disney+'):", getShowsByPlatform(catalogo.shows, 'Disney+'));
 
 //console.log(catalogo.sortShowsByPopularity());
 //console.log(catalogo.showList());
 //console.log(catalogo.getShowsByRatingRange(8,10));
 //console.log(catalogo.sortShowsByPopularity());
-const commonGens = getMostCommonGenre(catalogo.shows);
-console.log(commonGens);
+//const commonGens = getMostCommonGenre(catalogo.shows);
+//console.log(commonGens);
